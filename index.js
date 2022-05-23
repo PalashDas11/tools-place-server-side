@@ -30,6 +30,7 @@ async function run(){
   try{
     await client.connect();
     const toolsCollection = client.db('tools_place').collection('tools');
+    const ordersCollection = client.db('tools_place').collection('orders');
 
     app.get('/tools', async(req, res) => {
       const query = {};
@@ -46,7 +47,25 @@ async function run(){
       res.send(result);
     })
     // get 
-   
+    app.get('/purchase/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await toolsCollection.findOne(query);
+      res.send(result);
+    })
+
+    // post data on order collection 
+     app.post('/order', async (req, res)=> {
+       const oderProduct = req.body;
+       const query = { productName: oderProduct.productName, productId:oderProduct.productId};
+       const exists = await ordersCollection.findOne(query);
+       if (exists) {
+        return res.send({ success: false, order: exists })
+       
+      }
+       const result = await ordersCollection.insertOne(oderProduct);
+       return res.send({seccess:true, result})
+     })
 
   }
   finally{
