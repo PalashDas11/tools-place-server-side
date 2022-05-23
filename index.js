@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
 
@@ -37,6 +37,16 @@ async function run(){
       const tools = await cursor.limit(6).toArray();
       res.send(tools);
     })
+
+    // get single tool 
+    app.get('/toolDetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await toolsCollection.findOne(query);
+      res.send(result);
+    })
+    // get 
+   
 
   }
   finally{
