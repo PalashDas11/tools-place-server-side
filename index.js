@@ -31,12 +31,31 @@ async function run(){
     await client.connect();
     const toolsCollection = client.db('tools_place').collection('tools');
     const ordersCollection = client.db('tools_place').collection('orders');
+    const usersCollection = client.db('tools_place').collection('users');
 
     app.get('/tools', async(req, res) => {
       const query = {};
       const cursor = toolsCollection.find(query);
       const tools = await cursor.limit(6).toArray();
       res.send(tools);
+    })
+
+    // // put user 
+    app.put('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const user = req.body;
+      const filter = { email: email };
+      console.log(filter);
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+
+      res.send({ result, token });
+
     })
 
     // get single tool 
@@ -53,18 +72,28 @@ async function run(){
       const result = await toolsCollection.findOne(query);
       res.send(result);
     })
+      // get order 
+      app.get('/order', async (req, res) =>{
+        const order = req.query.customerEmail;
+        const query = {customerEmail:order}
+        const orders= await ordersCollection.find(query).toArray();
+        res.send(orders)
 
+      })
     // post data on order collection 
      app.post('/order', async (req, res)=> {
        const oderProduct = req.body;
-       const query = { productName: oderProduct.productName, productId:oderProduct.productId};
+       const query = { productName: oderProduct.productName};
        const exists = await ordersCollection.findOne(query);
        if (exists) {
         return res.send({ success: false, order: exists })
        
       }
-       const result = await ordersCollection.insertOne(oderProduct);
-       return res.send({seccess:true, result})
+      else{
+        const result = await ordersCollection.insertOne(oderProduct);
+        return res.send({seccess:true, result})
+      }
+       
      })
 
   }
