@@ -27,6 +27,8 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+
 function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -49,6 +51,18 @@ async function run() {
     const usersCollection = client.db('tools_place').collection('users');
     const paymentCollection = client.db('tools_place').collection('payment');
 
+    // verify admin 
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await usersCollection.findOne({ email: requester });
+      if (requesterAccount.role === 'admin') {
+        next();
+      }
+      else {
+        res.status(403).send({ message: 'forbidden' });
+      }
+    }
+
     app.get('/tools', async (req, res) => {
       const query = {};
       const cursor = toolsCollection.find(query);
@@ -56,17 +70,41 @@ async function run() {
       res.send(tools);
     })
     // payment 
-    app.post('/create-payment-intent', async(req, res) =>{
+    app.post('/create-payment-intent', async (req, res) => {
       const service = req.body;
       const price = service.productPrice;
-      const amount = price*100;
+      const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
-        amount : amount,
+        amount: amount,
         currency: 'usd',
-        payment_method_types:['card']
+        payment_method_types: ['card']
       });
-      res.send({clientSecret: paymentIntent.client_secret})
+      res.send({ clientSecret: paymentIntent.client_secret })
     });
+
+    // all users 
+    app.get('/user', verifyJWT, async (req, res) => {
+      const users = await usersCollection.find().toArray();
+      res.send(users)
+    })
+    // get admin role 
+    app.get('/admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email: email });
+      const isAdmin = user.role === 'admin';
+      res.send({ admin: isAdmin })
+    })  
+
+    // put user admin
+     app.put('/user/admin/:email', verifyJWT,  async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: 'admin' },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
 
     // // put user 
     app.put('/user/:email', async (req, res) => {
@@ -109,49 +147,51 @@ async function run() {
         const orders = await ordersCollection.find(query).toArray();
         return res.send(orders)
       }
-      else{
+      else {
         return res.status(403).send({ message: 'Forbidden access' })
       }
 
 
     })
     // delet id 
-    app.delete('/order/:id', async (req, res)=> {
+    app.delete('/order/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)}
-      const result =await ordersCollection.deleteOne(query);
+      const query = { _id: ObjectId(id) }
+      const result = await ordersCollection.deleteOne(query);
       res.send(result)
- 
-     })
+
+    })
     // get order id 
-    app.get('/order/:id', verifyJWT, async (req, res)=> {
+    app.get('/order/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)}
-      const result =await ordersCollection.findOne(query);
+      const query = { _id: ObjectId(id) }
+      const result = await ordersCollection.findOne(query);
       res.send(result)
- 
-     })
+
+    })
     //  patch
-    app.patch('/order/:id', async (req, res)=> {
+    app.patch('/order/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const payment = req.body;
-      const filter = {_id: ObjectId(id)}
-      const updateDoc={
-          $set:{
-            paid: true, 
-            transactionId: payment.transactionId
-          }
+      const filter = { _id: ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId
+        }
       }
-      const updatedOrder =await ordersCollection.updateOne(filter, updateDoc);
+      const updatedOrder = await ordersCollection.updateOne(filter, updateDoc);
       const result = await paymentCollection.insertOne(payment)
       res.send(updatedOrder)
- 
-     })
+
+    })
+
+
 
     // post data on order collection 
-    app.post('/order', async (req, res) => {
+    app.post('/order',async (req, res) => {
       const oderProduct = req.body;
-      const query = { productName: oderProduct.productName };
+      const query = { productName: oderProduct.productName, customerEmail: oderProduct.customerEmail };
       const exists = await ordersCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, order: exists })
@@ -163,8 +203,8 @@ async function run() {
       }
 
     })
-    
-   
+
+
 
   }
   finally {
