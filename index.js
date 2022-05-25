@@ -66,7 +66,7 @@ async function run() {
     app.get('/tools', async (req, res) => {
       const query = {};
       const cursor = toolsCollection.find(query);
-      const tools = await cursor.limit(6).toArray();
+      const tools = await cursor.toArray();
       res.send(tools);
     })
     // payment 
@@ -137,6 +137,16 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const result = await toolsCollection.findOne(query);
       res.send(result);
+    })
+
+  //  get oder collection 
+    app.get('/order', async(req, res) => {
+      const query = {};
+      const cursor =  ordersCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+
+
     })
     // get order 
     app.get('/order', verifyJWT, async (req, res) => {
