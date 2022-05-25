@@ -50,6 +50,7 @@ async function run() {
     const ordersCollection = client.db('tools_place').collection('orders');
     const usersCollection = client.db('tools_place').collection('users');
     const paymentCollection = client.db('tools_place').collection('payment');
+    const reviewCollection = client.db('tools_place').collection('review');
 
     // verify admin 
     const verifyAdmin = async (req, res, next) => {
@@ -70,9 +71,9 @@ async function run() {
       res.send(tools);
     })
     // add product on tools collection 
-    app.post('/tools',async(req, res) => {
+    app.post('/tools', async (req, res) => {
       const newTools = req.body;
-      const result =await toolsCollection.insertOne(newTools);
+      const result = await toolsCollection.insertOne(newTools);
       res.send(result)
     })
     // get manage item 
@@ -81,18 +82,18 @@ async function run() {
       const cursor = toolsCollection.find(query)
       const manageItems = await cursor.toArray();
       res.send(manageItems)
-  })
-    app.get('/tool', async (req, res) => {
+    })
+    app.get('/tool', verifyJWT, async (req, res) => {
       const query = {}
       const cursor = toolsCollection.find(query)
       const manageItems = await cursor.toArray();
       res.send(manageItems)
-  })
+    })
     // delete tools id 
     app.delete('/tool/:id', async (req, res) => {
       const id = req.params.id;
       console.log(id);
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       const result = await toolsCollection.deleteOne(query);
       res.send(result);
     })
@@ -122,10 +123,10 @@ async function run() {
       const user = await usersCollection.findOne({ email: email });
       const isAdmin = user.role === 'admin';
       res.send({ admin: isAdmin })
-    })  
+    })
 
     // put user admin
-     app.put('/user/admin/:email', verifyJWT,  async (req, res) => {
+    app.put('/user/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const updateDoc = {
@@ -138,10 +139,8 @@ async function run() {
     // // put user 
     app.put('/user/:email', async (req, res) => {
       const email = req.params.email;
-      console.log(email);
       const user = req.body;
       const filter = { email: email };
-      console.log(filter);
       const options = { upsert: true };
       const updateDoc = {
         $set: user,
@@ -168,10 +167,10 @@ async function run() {
       res.send(result);
     })
 
-  //  get oder collection 
-    app.get('/manage', async(req, res) => {
+    //  get oder collection 
+    app.get('/manage', async (req, res) => {
       const query = {};
-      const cursor =  ordersCollection.find(query);
+      const cursor = ordersCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
 
@@ -228,7 +227,7 @@ async function run() {
 
 
     // post data on order collection 
-    app.post('/order',async (req, res) => {
+    app.post('/order', async (req, res) => {
       const oderProduct = req.body;
       const query = { productName: oderProduct.productName, customerEmail: oderProduct.customerEmail };
       const exists = await ordersCollection.findOne(query);
@@ -243,6 +242,22 @@ async function run() {
 
     })
 
+
+    // review 
+    app.post('/review', async (req, res) => {
+      const newReview = req.body;
+      const result = await reviewCollection.insertOne(newReview);
+      res.send(result)
+    })
+    // get review 
+
+    app.get('/reviews', async (req, res) => {
+      const query = {};
+      const cursor = reviewCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    
 
 
   }
