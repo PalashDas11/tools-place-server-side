@@ -69,6 +69,35 @@ async function run() {
       const tools = await cursor.toArray();
       res.send(tools);
     })
+    // add product on tools collection 
+    app.post('/tools',async(req, res) => {
+      const newTools = req.body;
+      const result =await toolsCollection.insertOne(newTools);
+      res.send(result)
+    })
+    // get manage item 
+    app.get('/manageItems', verifyJWT, async (req, res) => {
+      const query = {}
+      const cursor = toolsCollection.find(query)
+      const manageItems = await cursor.toArray();
+      res.send(manageItems)
+  })
+    app.get('/tool', async (req, res) => {
+      const query = {}
+      const cursor = toolsCollection.find(query)
+      const manageItems = await cursor.toArray();
+      res.send(manageItems)
+  })
+    // delete tools id 
+    app.delete('/tool/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = {_id: ObjectId(id)};
+      const result = await toolsCollection.deleteOne(query);
+      res.send(result);
+    })
+
+
     // payment 
     app.post('/create-payment-intent', async (req, res) => {
       const service = req.body;
@@ -140,7 +169,7 @@ async function run() {
     })
 
   //  get oder collection 
-    app.get('/order', async(req, res) => {
+    app.get('/manage', async(req, res) => {
       const query = {};
       const cursor =  ordersCollection.find(query);
       const result = await cursor.toArray();
